@@ -1,25 +1,42 @@
+name: "Build and Release"
+
 on:
   push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+    branches:
+    - main
 
-name: Build Release
 jobs:
-  releases-matrix:
-    name: Release Go Binary
+  build-release:
+    name: "Build and Release"
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # build and publish in parallel: linux/386, windows/386, linux/amd64, windows/amd64
-        goos: [linux, windows, darwin]
-        goarch: [amd64, arm64]
+    permissions: write-all
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: RomanosTrechlis/actions-go-release@v0.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Checkout latest codebase"
+        uses: actions/checkout@v3
+
+      - name: "Setup Go Language version"
+        uses: actions/setup-go@v5
         with:
-          release_name: ${{ github.ref_name }}
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
+          go-version: '1.25.4'
+
+      - name: "Verify Go Language version"
+        run: go version
+
+      - name: "Build binaries for Go Port Redirect"
+        run: make build
+
+      - name: "List files"
+        run: ls -liFhR
+
+      - name: "Create a release"
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.run.id }}
+          tag_name: ${{ github.ref_name }}
+          files: |
+            caas-server-darwin-amd64
+            caas-server-darwin-arm64
+            caas-server-linux-amd64
+            caas-server-linux-arm64
+            caas-server-windows.exe
